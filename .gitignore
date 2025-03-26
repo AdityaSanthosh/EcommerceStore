@@ -1,0 +1,4 @@
+.venv/
+.idea/
+EcommerceStore/__pycache__/
+cart/__pycache__/
