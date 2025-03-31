@@ -59,6 +59,7 @@ class Cart(models.Model):
         self.discount_code = ""
         self.discounted_price = 0.0
         self.actual_price = 0.0
+        self.save()
 
 
 @receiver(post_save, sender=User)
