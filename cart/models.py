@@ -68,9 +68,6 @@ def create_user_cart(sender, instance, created, **kwargs):
 
 
 class CartItem(models.Model):
-    cart_id = models.ForeignKey(Cart, on_delete=models.CASCADE)
-    item = models.ForeignKey(Item, on_delete=models.CASCADE)
-    discounted = models.BooleanField(default=False)
     cart = models.ForeignKey(
         Cart,
         on_delete=models.CASCADE,
@@ -95,9 +92,6 @@ class Order(models.Model):
         ("paid", "Paid"),
     ]
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
-    status = models.CharField(choices=['fulfilled', 'pending', 'refunded'], db_index=True)
-    final_price = models.DecimalField(max_digits=6, decimal_places=2)
-    description = models.CharField(max_length=100)
     status = models.CharField(max_length=10, choices=ORDER_STATUS, db_index=True)
     discount_code = models.CharField(max_length=10, null=True, blank=True)
     discount_value = models.DecimalField(max_digits=6, decimal_places=2, default=0.0)
@@ -105,7 +99,6 @@ class Order(models.Model):
     price_paid = models.DecimalField(max_digits=6, decimal_places=2, default=0.0)
     description = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
