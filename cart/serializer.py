@@ -1,47 +1,35 @@
-from django.contrib.auth import get_user_model
+from django.db.models import CharField
 from rest_framework import serializers
 
-from .models import Cart, Item, CartItem, Order
-
-User = get_user_model()
+from .models import Cart, CartItem, Order
 
 
-class ItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Item
-        fields = (
-            "name",
-            "created_at",
-            "updated_at",
-            "actual_price",
-            "discounted_price",
-        )
-
-
-class CartItemSerializer(serializers.ModelSerializer):
-    item = ItemSerializer(read_only=True)
-
+class CartItemSerializer(serializers.Serializer):
     class Meta:
         model = CartItem
         fields = ("item", "quantity")
 
 
-class CartSerializer(serializers.ModelSerializer):
-    added_items = CartItemSerializer(many=True, required=False)
+class CartSerializer(serializers.Serializer):
+    items = CartItemSerializer(many=True, required=True)
 
     class Meta:
-        model = Cart
-        fields = ["added_items", "actual_price", "discounted_price"]
+        fields = ["items"]
 
 
+# POST {items: [{id: 1, quanti}]}
 class AddToCartSerializer(serializers.Serializer):
-    items = serializers.PrimaryKeyRelatedField(
-        queryset=Item.objects.all(), label="Item ID", many=True, required=True
-    )
+    items = CartItemSerializer(many=True, required=True)
 
 
 class OrderSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Order
         fields = "__all__"
+
+
+# /order/ {"cart_id": , "address": {"pincode":}, "discount_code": ""}
+class CartCheckoutSerializer(serializers.Serializer):
+    cart_id = serializers.PrimaryKeyRelatedField(queryset=Cart.objects.all(), label="Cart ID", required=True)
+    address = serializers.DictField(pincode=CharField())
+    discount_code = serializers.CharField()

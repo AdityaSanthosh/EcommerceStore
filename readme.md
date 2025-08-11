@@ -2,15 +2,14 @@
 
 This repository contains the backend API for a simple e-commerce store, built using Django and Django Rest Framework.
 
-## Features
+##### Product Flow
+1. Checkout the cart which freezes the prices for 10 mins
+2. Get total price which calculates cart value with frozen prices after checkout
+3. Place order considering checked out prices
+4. Proceed with payment which means order is placed and payment is attached to it later
 
-* **Product Management:** Define and manage products (items) with prices and discounts.
-* **User Carts:** Users can add items to their carts, apply discounts, and checkout.
-* **Order Processing:** Orders are created upon successful checkout, tracking payment and discount details.
-* **Discount System:** Apply discounts to carts using discount codes.
-* **Admin Analytics:** Provides insights into order statistics, including total sales and discount usage.
 
-## Models
+#### Models
 
 * `Item`: Represents a product.
 * `Cart`: User's shopping cart.
@@ -18,16 +17,8 @@ This repository contains the backend API for a simple e-commerce store, built us
 * `Order`: Completed order.
 * `OrderItem`: Items within an order.
 
-## API Endpoints
 
-* `/cart/`: *GET* user's cart.
-* `/cart/items/`: *PUT* items to the cart.
-* `/cart/checkout/discount/`: Check and apply(*PUT*) discounts.
-* `/cart/checkout/payment/`: Process payment and create(*PUT*) an order.
-* `/admin/discount/`: Admin endpoint to check(*GET*) discount availability.
-* `/admin/analytics/`: Admin endpoint to get(*GET*) order analytics.
-
-## Setup
+#### Setup
 
 1.  Clone the repository:
     ```bash
@@ -52,7 +43,7 @@ This repository contains the backend API for a simple e-commerce store, built us
     python manage.py runserver
     ```
 
-## Usage
+#### Usage
 
 * Use an API client (e.g., Postman, Insomnia) to [interact](https://drive.google.com/file/d/1AaNXsGGJt4iHsvQEMETHF8lj34tgie5j/view?usp=drive_link) with the API endpoints.
 * Set the `HTTP_USER_ID` header in your requests to identify the user.
