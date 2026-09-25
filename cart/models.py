@@ -1,23 +1,18 @@
 from decimal import Decimal
 
 from django.db import models
-from django.contrib.auth import get_user_model as djangoUser
+from django.contrib.auth.models import User as DjangoUser
 from django.db.models import UniqueConstraint
 
-from cart.services.cart_handler import CartHandler
-
-
-class User(djangoUser):
+class User(DjangoUser):
     class Meta:
         proxy = True
 
-    def save(self):
-        super().save()
-        User.create_cart(self.id)
-
     @property
     def cart(self):
-        return Cart.objects.get_or_create(user_id=self.id, status=Cart.Status.ACTIVE)
+        # A user has at most one open (active/locked) cart; ordered carts are kept as history
+        cart = Cart.objects.filter(user_id=self.id).exclude(status=Cart.Status.ORDERED).first()
+        return cart or Cart.objects.create(user_id=self.id)
 
 class Item(models.Model):
     """
@@ -51,18 +46,21 @@ class Cart(models.Model):
         LOCKED = 'locked', 'Locked'
         ORDERED = 'ordered', 'Ordered'
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='cart')
-    status = models.CharField(choices=Status.choices, default=Status.ACTIVE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, related_name='carts')
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     locked_at = models.DateTimeField(null=True)
 
     def value(self):
+        from cart.services.cart_handler import CartHandler
         return CartHandler(self).get_value()
 
     def clear(self):
+        from cart.services.cart_handler import CartHandler
         CartHandler(self).clear_items()
 
-    def add(self, item):
-        CartHandler(self).add_items([item])
+    def add_items(self, items):
+        from cart.services.cart_handler import CartHandler
+        return CartHandler(self).add_items(items)
 
 class CartItem(models.Model):
     """
@@ -112,15 +110,13 @@ class Order(models.Model):
         ("paid", "Paid"),
     ]
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING)
-    status = models.CharField(max_length=10, choices=ORDER_STATUS, db_index=True)
+    status = models.CharField(max_length=20, choices=ORDER_STATUS, db_index=True)
     payment_details = models.ForeignKey(Payment, on_delete=models.CASCADE, null=True)
     discount_code = models.CharField(max_length=10, null=True, blank=True)
     discount_value = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('0.0'))
+    actual_price = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('0.0'))
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def items(self):
-        return self.items
 
 
 class OrderItem(models.Model):

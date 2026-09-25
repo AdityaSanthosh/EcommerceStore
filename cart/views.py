@@ -4,7 +4,6 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -14,7 +13,7 @@ from cart.services.order_service import OrderService
 
 
 def get_user(request):
-    user_id = request.META["HTTP_USER_ID"]
+    user_id = request.META.get("HTTP_USER_ID")
     return get_object_or_404(User, pk=user_id)
 
 
@@ -32,23 +31,27 @@ class CartView(APIView):
         items = serializer.validated_data["items"]
 
         cart = user.cart
-        success = cart.add_items(items=[{item.id, item.quantity} for item in items])
+        success = cart.add_items(items)
         if success:
             return Response(CartSerializer(cart).data, status=status.HTTP_200_OK)
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    @action(methods=['post'], detail=False)
-    def checkout(self, request):
+
+class CartCheckoutView(APIView):
+    # POST /cart/checkout/
+    def post(self, request):
         user = get_user(request)
         # on checkout, freeze the price (copy item's actual_price to cart_item's locked_price and change the cart status to LOCKED)
-        cart = Cart.objects.prefetch_related("added_items__item").get(user=user)
-        if cart.status == Cart.Status.LOCKED:
+        cart = user.cart
+        if cart.status == Cart.Status.LOCKED and cart.locked_at >= timezone.now() - datetime.timedelta(minutes=10):
             return Response(
                 {"error": "Cart already checked out"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+        if not cart.added_items.exists():
+            return Response({"error": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
         with transaction.atomic():
-            for cart_item in cart.added_items.all().all():
+            for cart_item in cart.added_items.select_related("item"):
                 # Lock price at checkout time
                 cart_item.locked_price = cart_item.item.actual_price
                 cart_item.save()
@@ -63,11 +66,16 @@ class CartView(APIView):
             "locked_until": cart.locked_at + datetime.timedelta(minutes=10),
         })
 
-    @action(methods=['get'], detail=False)
-    def value(self, request):
+
+class CartValueView(APIView):
+    # POST /cart/value/ {"cart_id": , "address": {"pincode":}, "discount_code": ""}
+    def post(self, request):
         user = get_user(request)
-        serializer = CartCheckoutSerializer(request.data)
-        cart_id, address, discount_code = serializer.validated_data
+        serializer = CartCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        cart_id = serializer.validated_data["cart_id"].id
+        address = serializer.validated_data["address"]
+        discount_code = serializer.validated_data["discount_code"]
         if user.cart.id != cart_id:
             return Response(data="This Cart ID doesn't belong to you", status=status.HTTP_403_FORBIDDEN)
         total_price = OrderService.calculate_total_price(cart_id, discount_code, shipping_code=address['pincode'])
@@ -83,8 +91,11 @@ class CartView(APIView):
 class OrderView(APIView):
     def post(self, request):
         user = get_user(request)
-        serializer = CartCheckoutSerializer(request.data)
-        cart_id, address, discount_code = serializer.validated_data
+        serializer = CartCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        cart_id = serializer.validated_data["cart_id"].id
+        address = serializer.validated_data["address"]
+        discount_code = serializer.validated_data["discount_code"]
         cart = user.cart
         if cart.id != cart_id:
             return Response(data="This Cart ID doesn't belong to you", status=status.HTTP_403_FORBIDDEN)
