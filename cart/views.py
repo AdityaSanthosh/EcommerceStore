@@ -1,7 +1,6 @@
 import datetime
 
 from django.db import transaction
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
@@ -13,8 +12,8 @@ from cart.services.order_service import OrderService
 
 
 def get_user(request):
-    user_id = request.META.get("HTTP_USER_ID")
-    return get_object_or_404(User, pk=user_id)
+    # request.user is set by JWT authentication; views require IsAuthenticated by default
+    return User.objects.get(pk=request.user.pk)
 
 
 class CartView(APIView):

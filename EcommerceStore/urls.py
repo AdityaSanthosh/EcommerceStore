@@ -20,5 +20,9 @@ from django.urls import path, include
 from rest_framework.urlpatterns import format_suffix_patterns
 
 urlpatterns = format_suffix_patterns(
-    [path("admin/", admin.site.urls), path("", include("cart.urls"))]
+    [
+        path("admin/", admin.site.urls),
+        path("auth/", include("accounts.urls")),
+        path("", include("cart.urls")),
+    ]
 )

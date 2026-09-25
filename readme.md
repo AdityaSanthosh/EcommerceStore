@@ -46,4 +46,7 @@ This repository contains the backend API for a simple e-commerce store, built us
 #### Usage
 
 * Use an API client (e.g., Postman, Insomnia) to [interact](https://drive.google.com/file/d/1AaNXsGGJt4iHsvQEMETHF8lj34tgie5j/view?usp=drive_link) with the API endpoints.
-* Set the `HTTP_USER_ID` header in your requests to identify the user.
+* All cart/order endpoints require a JWT access token: `Authorization: Bearer <access>`.
+    * `POST /auth/register/` `{"username": "", "password": ""}` creates a user
+    * `POST /auth/token/` `{"username": "", "password": ""}` returns `access` (valid 5 mins) and `refresh` (valid 1 day) tokens
+    * `POST /auth/token/refresh/` `{"refresh": ""}` returns a new `access` token
